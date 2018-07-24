@@ -7,13 +7,13 @@ This module contains basic objects used in package
 """
 
 
-class StationInfo:
+class Station(object):
     """
     车站信息
     :param name: 中文名
     :param pinyin: 拼音
     :param code_name: 英文代号
-    :param add_pinyin: 拼音首字母缩写
+    :param abb_pinyin: 拼音首字母缩写
     """
 
     def __init__(self, name, pinyin, code_name, abb_pinyin):
@@ -26,7 +26,7 @@ class StationInfo:
         return '{%s, %s, %s, %s}' % (self.name, self.code_name, self.pinyin, self.abb_pinyin)
 
 
-class TrainInfo:
+class TrainInfo(object):
     """
     车次信息，不包含详细的列车时刻表
     :param code: 车次
