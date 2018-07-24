@@ -43,3 +43,39 @@ class TrainInfo(object):
 
     def __repr__(self):
         return '{%s, %s, %s, %s}' % (self.code, self.start, self.end, self.train_no)
+
+
+class TrainDetail(object):
+    """
+    某一站的停靠信息
+    :param station_name: 车站中文名
+    :param arrive_time: 到达时间[None表示为始发站]
+    :param start_time: 开车时间[None表示为终到站]
+    """
+
+    def __init__(self, station_name, arrive_time, start_time):
+        self.station_name = station_name
+        self.arrive_time = arrive_time
+        self.start_time = start_time
+
+    def __repr__(self):
+        return '{%s, %s, %s}' % (self.station_name, self.arrive_time, self.start_time)
+
+
+class Train(object):
+    """
+    一趟完整的车次信息
+    code: 车次
+    start: 始发站[中文]
+    end  终到站[中文]
+    station_details: 停靠站点信息
+    """
+
+    def __init__(self, train_info, station_details):
+        self.code = train_info.code
+        self.start = train_info.start
+        self.end = train_info.end
+        self.station_details = station_details
+
+    def __repr__(self):
+        return "%s -- %s -- %s\n%s" % (self.start, self.code, self.end, self.station_details)
