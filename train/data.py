@@ -75,6 +75,7 @@ def get_train_details(train_no, start_code, end_code, date):
     for item in res_data["data"]["data"]:
         arrive_time = None if item["arrive_time"] == "----" else item["arrive_time"]
         start_time = None if item["start_time"] == "----" else item["start_time"]
-        station_details.append(TrainDetail(item["station_name"], arrive_time, start_time))
+        if item["isEnabled"]:
+            station_details.append(TrainDetail(item["station_name"], arrive_time, start_time))
 
     return station_details
