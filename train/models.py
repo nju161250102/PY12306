@@ -59,7 +59,7 @@ class TrainDetail(object):
         self.start_time = start_time
 
     def __repr__(self):
-        return '{%s, %s, %s}' % (self.station_name, self.arrive_time, self.start_time)
+        return ('{%s, %s, %s}' % (self.station_name, self.arrive_time, self.start_time)).encode('utf-8')
 
 
 class Train(object):
@@ -78,4 +78,4 @@ class Train(object):
         self.station_details = station_details
 
     def __repr__(self):
-        return "%s -- %s -- %s\n%s" % (self.start, self.code, self.end, self.station_details)
+        return ("%s -- %s -- %s\n%s" % (self.start, self.code, self.end, self.station_details)).encode('utf-8')
