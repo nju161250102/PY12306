@@ -7,7 +7,7 @@ This module contains basic objects used in package
 """
 
 
-class Station(object):
+class StationInfo(object):
     """
     车站信息
     :param name: 中文名
@@ -79,3 +79,35 @@ class Train(object):
 
     def __repr__(self):
         return ("%s -- %s -- %s\n%s" % (self.start, self.code, self.end, self.station_details)).encode('utf-8')
+
+
+class Rail(object):
+
+    def __init__(self, rail_id, json_dict):
+        self.id = rail_id
+        self.name = json_dict["name"]
+        self.lineNum = json_dict["lineNum"]
+        self.speed = json_dict["designSpeed"]
+        self.elec = json_dict["elec"]
+        self.service = json_dict["railService"]
+        self.type = json_dict["railType"]
+
+
+class Station(object):
+
+    def __init__(self, name, json_dict):
+        self.id = json_dict["id"]
+        self.name = name
+        self.teleCode = json_dict["teleCode"]
+        self.pinyinCode = json_dict["pinyinCode"]
+        self.location = json_dict["location"]
+        self.bureau = json_dict["bureau"]["name"]
+        self.service = json_dict["serviceClass"]
+
+
+class RailStationRelation(object):
+
+    def __init__(self, rid, sid, mileage):
+        self.rid = rid
+        self.sid = sid
+        self.mileage = mileage
