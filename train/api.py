@@ -41,3 +41,32 @@ def get_train(train_code, station_from=None, station_to=None, date=None):
                                       date)
 
     return Train(train_info, train_details)
+
+
+def import_rails(db_path):
+    rail_ids = [3360]
+    rail_ids_pos = 0
+    station_ids = []
+
+    while rail_ids_pos != len(rail_ids):
+        r = requests.get("http://cnrail.geogv.org/api/v1/rail/%s?locale=zhcn" % rail_ids[-1])
+        rail_result = json.loads(r.text, encoding="utf-8")
+        for station in rail_result["data"]["diagram"]["records"]:
+            station_type = station[2]
+            if station_type in ["MST", "SST"]:
+                station_id = station[3][0][1]
+                r = requests.get("http://cnrail.geogv.org/api/v1/station/%s?locale=zhcn&query-override=&requestGeom=true" % station_id)
+                station_result = json.loads(r.text, encoding="utf-8")
+                if station_result["serviceClass"] != "" and station_id not in station_ids:
+                    print(station[3][0][2].encode("utf-8"))
+                    station_ids.append(station_id)
+                    # save station
+                r = requests.get("http://cnrail.geogv.org/api/v1/station-link/%s?locale=zhcn&query-override=" % num)
+                relation_result = json.loads(r.text, encoding="utf-8")
+                for line in relation_result["data"]:
+                    if line["railId"] not in rail_ids:
+                        print "新线路："
+                        print line["railName"].encode("utf-8")
+                        rail_ids.append(line["railId"])
+                        # save relation
+        rail_ids_pos += 1
