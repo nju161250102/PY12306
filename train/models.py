@@ -95,9 +95,9 @@ class Rail(object):
 
 class Station(object):
 
-    def __init__(self, name, json_dict):
+    def __init__(self, json_dict):
         self.id = json_dict["id"]
-        self.name = name
+        self.name = json_dict["localName"]
         self.teleCode = json_dict["teleCode"]
         self.pinyinCode = json_dict["pinyinCode"]
         self.location = json_dict["location"]
