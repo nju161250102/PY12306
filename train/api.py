@@ -8,6 +8,7 @@ This module provides api interface
 from .data import *
 from .tools import *
 from .models import Train
+from .database import *
 import time
 
 
@@ -46,27 +47,25 @@ def get_train(train_code, station_from=None, station_to=None, date=None):
 def import_rails(db_path):
     rail_ids = [3360]
     rail_ids_pos = 0
-    station_ids = []
+    all_station_ids = []
+    data_service = SqlliteDataImpl(db_path)
 
     while rail_ids_pos != len(rail_ids):
-        r = requests.get("http://cnrail.geogv.org/api/v1/rail/%s?locale=zhcn" % rail_ids[-1])
-        rail_result = json.loads(r.text, encoding="utf-8")
-        for station in rail_result["data"]["diagram"]["records"]:
-            station_type = station[2]
-            if station_type in ["MST", "SST"]:
-                station_id = station[3][0][1]
-                r = requests.get("http://cnrail.geogv.org/api/v1/station/%s?locale=zhcn&query-override=&requestGeom=true" % station_id)
-                station_result = json.loads(r.text, encoding="utf-8")
-                if station_result["serviceClass"] != "" and station_id not in station_ids:
-                    print(station[3][0][2].encode("utf-8"))
-                    station_ids.append(station_id)
-                    # save station
-                r = requests.get("http://cnrail.geogv.org/api/v1/station-link/%s?locale=zhcn&query-override=" % num)
-                relation_result = json.loads(r.text, encoding="utf-8")
-                for line in relation_result["data"]:
-                    if line["railId"] not in rail_ids:
-                        print "新线路："
-                        print line["railName"].encode("utf-8")
-                        rail_ids.append(line["railId"])
-                        # save relation
+        rail, station_infos = get_rails(rail_ids[-1])
+        data_service.save_rail(rail)
+        for station_info in station_infos:
+            station_id = station_info[0]
+            station, rs_relation = get_station(station_id, rail.id, station_info[1])
+            if station is None:
+                continue
+            data_service.save_relation(rs_relation)
+            if station_id not in all_station_ids:
+                data_service.save_station(station)
+                print station.name
+                all_station_ids.append(station_id)
+            lines = get_station_link(station_id)
+            for line_id in lines:
+                if line_id not in rail_ids:
+                    print line_id
+                    rail_ids.append(line_id)
         rail_ids_pos += 1
