@@ -6,12 +6,13 @@ train.data
 This module can get data from Internet or local file
 """
 from .models import *
+from .tools import get_rs_relation_model, get_rail_model, get_station_model
 import requests
 import re
 import json
 
 
-def get_station_list(path=None):
+def get_station_list(path=None) -> list:
     """
     获得车站站点列表[从本地已下载的js文件或者从网络获取]
     URL: https://kyfw.12306.cn/otn/resources/js/framework/station_name.js
@@ -33,7 +34,7 @@ def get_station_list(path=None):
     return station_list
 
 
-def get_train_dict(path=None):
+def get_train_dict(path=None) -> dict:
     """
     从本地文件或者网络获取车次信息
     URL: https://kyfw.12306.cn/otn/resources/js/query/train_list.js
@@ -54,7 +55,7 @@ def get_train_dict(path=None):
     return train_dict
 
 
-def get_train_details(train_no, start_code, end_code, date):
+def get_train_details(train_no: str, start_code: str, end_code: str, date: str) -> list:
     """
     从网络查询车次信息
     URL: https://kyfw.12306.cn/otn/czxx/queryByTrainNo
@@ -80,7 +81,7 @@ def get_train_details(train_no, start_code, end_code, date):
     return station_details
 
 
-def get_rails(rail_id):
+def get_rails(rail_id: int) -> tuple:
     """
     从网站获取铁路线路数据
     :param rail_id: 网站使用的铁路id
@@ -89,14 +90,14 @@ def get_rails(rail_id):
     r = requests.get("http://cnrail.geogv.org/api/v1/rail/%s?locale=zhcn" % rail_id)
     result = json.loads(r.text, encoding="utf-8")
     if result["success"]:
-        rail = Rail(rail_id, result["data"])
-        station_infos = \
-            [[station[3][0][1], station[1]] for station in result["data"]["diagram"]["records"] if station[2] in ["MST", "SST"]]
+        rail = get_rail_model(rail_id, result["data"])
+        station_infos = [[station[3][0][1], station[1]] for station in result["data"]["diagram"]["records"]
+                         if station[2] in ["MST", "SST"]]
         return rail, station_infos
     return None, None
 
 
-def get_station(station_id, rail_id, mileage):
+def get_station(station_id: int, rail_id: int, mileage: int) -> tuple:
     """
     从网站获取站点以及站点-线路关联
     :param station_id: 站点id
@@ -107,12 +108,12 @@ def get_station(station_id, rail_id, mileage):
     r = requests.get(
         "http://cnrail.geogv.org/api/v1/station/%s?locale=zhcn&query-override=&requestGeom=true" % station_id)
     result = json.loads(r.text, encoding="utf-8")
-    station = Station(result) if result["serviceClass"] != "" else None
-    rs_relation = RailStationRelation(rail_id, station_id, mileage)
+    station = get_station_model(result) if result["serviceClass"] != "" else None
+    rs_relation = get_rs_relation_model(rail_id, station_id, mileage)
     return station, rs_relation
 
 
-def get_station_link(station_id):
+def get_station_link(station_id: int) -> list:
     """
     从网站获取站点经过的线路
     :param station_id: 站点id
@@ -120,4 +121,7 @@ def get_station_link(station_id):
     """
     r = requests.get("http://cnrail.geogv.org/api/v1/station-link/%s?locale=zhcn&query-override=" % station_id)
     result = json.loads(r.text, encoding="utf-8")
-    return [line["railId"] for line in result["data"]]
+    if result["success"]:
+        return [line["railId"] for line in result["data"]]
+    else:
+        return []
