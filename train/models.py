@@ -5,6 +5,54 @@ train.models
 
 This module contains basic objects used in package
 """
+from peewee import *
+db = SqliteDatabase('train.db')  # 配置数据库连接
+
+
+class BaseModel(Model):
+    """
+    peewee 模型使用的基类
+    """
+    class Meta:
+        database = db
+
+
+class RailStationRelation(BaseModel):
+    """
+    线路-站点 关系模型
+    """
+    rid = IntegerField()
+    sid = IntegerField()
+    mileage = IntegerField()
+
+    class Meta:
+        table_name = "rs_relation"
+
+
+class Rail(BaseModel):
+    """
+    线路模型
+    """
+    id = IntegerField(primary_key=True)
+    name = TextField()
+    lineNum = TextField()
+    speed = TextField()
+    elec = TextField()
+    service = TextField()
+    type = TextField()
+
+
+class Station(BaseModel):
+    """
+    车站模型
+    """
+    id = IntegerField(primary_key=True)
+    name = TextField()
+    teleCode = TextField()
+    pinyinCode = TextField()
+    location = TextField()
+    bureau = TextField()
+    service = TextField()
 
 
 class StationInfo(object):
@@ -79,35 +127,3 @@ class Train(object):
 
     def __repr__(self):
         return ("%s -- %s -- %s\n%s" % (self.start, self.code, self.end, self.station_details)).encode('utf-8')
-
-
-class Rail(object):
-
-    def __init__(self, rail_id, json_dict):
-        self.id = rail_id
-        self.name = json_dict["name"]
-        self.lineNum = json_dict["lineNum"]
-        self.speed = json_dict["designSpeed"]
-        self.elec = json_dict["elec"]
-        self.service = json_dict["railService"]
-        self.type = json_dict["railType"]
-
-
-class Station(object):
-
-    def __init__(self, json_dict):
-        self.id = json_dict["id"]
-        self.name = json_dict["localName"]
-        self.teleCode = json_dict["teleCode"]
-        self.pinyinCode = json_dict["pinyinCode"]
-        self.location = json_dict["location"]
-        self.bureau = json_dict["bureau"]["name"]
-        self.service = json_dict["serviceClass"]
-
-
-class RailStationRelation(object):
-
-    def __init__(self, rid, sid, mileage):
-        self.rid = rid
-        self.sid = sid
-        self.mileage = mileage
