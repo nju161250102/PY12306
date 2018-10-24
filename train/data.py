@@ -6,7 +6,7 @@ train.data
 This module can get data from Internet or local file
 """
 from .models import *
-from .tools import get_rs_relation_model, get_rail_model, get_station_model
+from .tools import get_rs_relation_model, get_rail_model, get_station_model, get_column_value
 import requests
 import re
 import json
@@ -24,7 +24,7 @@ def get_station_list(path=None) -> list:
         with open(path, 'r') as f:
             req = f.read()
     else:
-        req = requests.get("https://kyfw.12306.cn/otn/resources/js/framework/station_name.js").content
+        req = requests.get("https://kyfw.12306.cn/otn/resources/js/framework/station_name.js").text
 
     index = req.index("'")
     namelist = req[index:-1].split("|")
@@ -81,7 +81,7 @@ def get_train_details(train_no: str, start_code: str, end_code: str, date: str) 
     return station_details
 
 
-def get_rails(rail_id: int) -> tuple:
+def get_rails(rail_id: str) -> tuple:
     """
     从网站获取铁路线路数据
     :param rail_id: 网站使用的铁路id
@@ -91,25 +91,42 @@ def get_rails(rail_id: int) -> tuple:
     result = json.loads(r.text, encoding="utf-8")
     if result["success"]:
         rail = get_rail_model(rail_id, result["data"])
-        station_infos = [[station[3][0][1], station[1]] for station in result["data"]["diagram"]["records"]
-                         if station[2] in ["MST", "SST"]]
+        # 部分线路上没有车站信息
+        if result["data"]["diagram"] is None:
+            return rail, []
+        # 缺少里程时用None代替
+        station_infos = [[station[3][0][1], station[1] if station[1] != "" else None]
+                         for station in result["data"]["diagram"]["records"] if station[2] in ["MST", "SST"]]
         return rail, station_infos
     return None, None
 
 
-def get_station(station_id: int, rail_id: int, mileage: int) -> tuple:
+def get_station(station_id: int, rail_id: int, mileage: int, no: int, station_list, data) -> tuple:
     """
     从网站获取站点以及站点-线路关联
+    :param station_list:
     :param station_id: 站点id
     :param rail_id: 线路id
     :param mileage: 线路里程
+    :param no:
     :return:
     """
     r = requests.get(
         "http://cnrail.geogv.org/api/v1/station/%s?locale=zhcn&query-override=&requestGeom=true" % station_id)
     result = json.loads(r.text, encoding="utf-8")
+    if result["serviceClass"] != "":
+        if result["teleCode"] is None:
+            for s in station_list:
+                if s.name == result["localName"]:
+                    result["teleCode"] = s.tele_code.upper()
+        if result["pinyinCode"] is None:
+            for s in station_list:
+                if s.name == result["localName"]:
+                    result["pinyinCode"] = s.pinyin_code.upper()
+        result["x"] = get_column_value(result["localName"], "WGS84_Lng", data)
+        result["y"] = get_column_value(result["localName"], "WGS84_Lat", data)
     station = get_station_model(result) if result["serviceClass"] != "" else None
-    rs_relation = get_rs_relation_model(rail_id, station_id, mileage)
+    rs_relation = get_rs_relation_model(rail_id, station_id, mileage, no)
     return station, rs_relation
 
 

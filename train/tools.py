@@ -6,6 +6,7 @@ train.tools
 This module provides tools used in this package
 """
 from .models import *
+import pandas as pd
 
 
 def to_name(code, station_list: list):
@@ -34,11 +35,16 @@ def to_code(name, station_list: list):
     return None
 
 
-def get_rs_relation_model(rid: int, sid: int, mileage: int) -> RailStationRelation:
-    return RailStationRelation(rid=rid, sid=sid, mileage=mileage)
+def get_column_value(station_name: str, column_name: str, data: pd.DataFrame):
+    s = data.loc[data['站名'] == station_name][column_name].values
+    return s[0] if s.size > 0 else None
 
 
-def get_rail_model(rail_id: int, json_dict: dict) -> Rail:
+def get_rs_relation_model(rid: int, sid: int, mileage: int, no: int) -> RailStationRelation:
+    return RailStationRelation(rid=rid, sid=sid, mileage=mileage, no=no)
+
+
+def get_rail_model(rail_id: str, json_dict: dict) -> Rail:
     return Rail(id=rail_id,
                 name=json_dict["name"],
                 lineNum=json_dict["lineNum"],
@@ -54,5 +60,7 @@ def get_station_model(json_dict: dict) -> Station:
                    teleCode=json_dict["teleCode"],
                    pinyinCode=json_dict["pinyinCode"],
                    location=json_dict["location"],
-                   bureau=json_dict["bureau"]["name"],
-                   service=json_dict["serviceClass"], )
+                   bureau=json_dict["bureau"]["name"] if json_dict["bureau"] is not None else None,
+                   service=json_dict["serviceClass"],
+                   x=json_dict["x"],
+                   y=json_dict["y"])
