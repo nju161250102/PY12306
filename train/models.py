@@ -24,6 +24,7 @@ class RailStationRelation(BaseModel):
     rid = IntegerField()
     sid = IntegerField()
     mileage = IntegerField()
+    no = IntegerField()
 
     class Meta:
         table_name = "rs_relation"
@@ -53,6 +54,8 @@ class Station(BaseModel):
     location = TextField()
     bureau = TextField()
     service = TextField()
+    x = DoubleField()
+    y = DoubleField()
 
 
 class StationInfo(object):
@@ -64,14 +67,14 @@ class StationInfo(object):
     :param abb_pinyin: 拼音首字母缩写
     """
 
-    def __init__(self, name, pinyin, code_name, abb_pinyin):
+    def __init__(self, name, pinyin, tele_code, pinyin_code):
         self.name = name
         self.pinyin = pinyin
-        self.code_name = code_name
-        self.abb_pinyin = abb_pinyin
+        self.tele_code = tele_code
+        self.pinyin_code = pinyin_code
 
     def __repr__(self):
-        return '{%s, %s, %s, %s}' % (self.name, self.code_name, self.pinyin, self.abb_pinyin)
+        return '{%s, %s, %s, %s}' % (self.name, self.tele_code, self.pinyin, self.pinyin_code)
 
 
 class TrainInfo(object):

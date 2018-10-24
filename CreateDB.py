@@ -9,7 +9,7 @@ c.execute('''
 CREATE TABLE rail (
   id INTEGER NOT NULL PRIMARY KEY,
   name TEXT DEFAULT NULL,
-  lineNum INTEGER DEFAULT NULL,
+  lineNum TEXT DEFAULT NULL,
   speed TEXT DEFAULT NULL,
   elec TEXT DEFAULT NULL,
   service TEXT DEFAULT NULL,
@@ -24,7 +24,9 @@ CREATE TABLE station (
   pinyinCode TEXT DEFAULT NULL,
   location TEXT DEFAULT NULL,
   bureau TEXT DEFAULT NULL,
-  service  TEXT DEFAULT NULL);
+  service  TEXT DEFAULT NULL,
+  x REAL DEFAULT NULL,
+  y REAL DEFAULT NULL);
 ''')
 c.execute("DROP TABLE IF EXISTS rs_relation;")
 c.execute('''
@@ -32,5 +34,6 @@ CREATE TABLE rs_relation (
   rid INTEGER NOT NULL,
   sid INTEGER NOT NULL,
   mileage INTEGER DEFAULT NULL,
-  PRIMARY KEY (rid, sid));
+  no INTEGER DEFAULT NULL,
+  PRIMARY KEY(rid, sid));
 ''')
