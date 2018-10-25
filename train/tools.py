@@ -36,15 +36,34 @@ def to_code(name, station_list: list):
 
 
 def get_column_value(station_name: str, column_name: str, data: pd.DataFrame):
+    """
+    SELECT column_name FROM data WHERE 站名=station_name
+    :param station_name: 站点名
+    :param column_name: 列名
+    :param data: 数据
+    :return: 返回值，不存在则返回None
+    """
     s = data.loc[data['站名'] == station_name][column_name].values
     return s[0] if s.size > 0 else None
 
 
 def get_rs_relation_model(rid: int, sid: int, mileage: int, no: int) -> RailStationRelation:
+    """
+    :param rid: rail_id
+    :param sid: station_id
+    :param mileage: 里程
+    :param no: 序号
+    :return: 返回封装后的RailStationRelation
+    """
     return RailStationRelation(rid=rid, sid=sid, mileage=mileage, no=no)
 
 
 def get_rail_model(rail_id: str, json_dict: dict) -> Rail:
+    """
+    :param rail_id:
+    :param json_dict: 抓取的json数据
+    :return: 返回封装后的Rail
+    """
     return Rail(id=rail_id,
                 name=json_dict["name"],
                 lineNum=json_dict["lineNum"],
@@ -55,6 +74,10 @@ def get_rail_model(rail_id: str, json_dict: dict) -> Rail:
 
 
 def get_station_model(json_dict: dict) -> Station:
+    """
+    :param json_dict: 抓取的json数据
+    :return: 返回封装后的Station
+    """
     return Station(id=json_dict["id"],
                    name=json_dict["localName"],
                    teleCode=json_dict["teleCode"],

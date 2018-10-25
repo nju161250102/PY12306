@@ -104,12 +104,13 @@ def get_rails(rail_id: str) -> tuple:
 def get_station(station_id: int, rail_id: int, mileage: int, no: int, station_list, data) -> tuple:
     """
     从网站获取站点以及站点-线路关联
-    :param station_list:
     :param station_id: 站点id
     :param rail_id: 线路id
     :param mileage: 线路里程
-    :param no:
-    :return:
+    :param no: 站点序号
+    :param station_list: 车站信息列表（来自12306网站）
+    :param data: 车站位置数据（来自xlsx文件）
+    :return: tuple(Station, RailStationRelation)
     """
     r = requests.get(
         "http://cnrail.geogv.org/api/v1/station/%s?locale=zhcn&query-override=&requestGeom=true" % station_id)
