@@ -6,7 +6,7 @@ train.api
 This module provides api interface
 """
 from .data import *
-from .tools import *
+from .utils import *
 from .models import Train
 import time
 import pandas as pd
@@ -36,10 +36,8 @@ def get_train(train_code, station_from=None, station_to=None, date=None):
         station_to = train_info.end
 
     station_list = get_station_list()
-    train_details = get_train_details(train_info.train_no,
-                                      to_code(station_from, station_list),
-                                      to_code(station_to, station_list),
-                                      date)
+    train_details = query_train(train_info.train_no, to_code(station_from, station_list),
+                                to_code(station_to, station_list), date)
 
     return Train(train_info, train_details)
 

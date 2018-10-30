@@ -6,47 +6,42 @@ train.data
 This module can get data from Internet or local file
 """
 from .models import *
-from .tools import get_rs_relation_model, get_rail_model, get_station_model, get_column_value
+from .utils import get_rs_relation_model, get_rail_model, get_station_model, get_column_value
 import requests
 import re
 import json
 
 
-def get_station_list(path=None) -> list:
-    """
-    获得车站站点列表[从本地已下载的js文件或者从网络获取]
+def get_station_list() -> list:
+    """获得车站站点列表
+
     URL: https://kyfw.12306.cn/otn/resources/js/framework/station_name.js
-    :param path: 本地文件地址。默认为None表示从网络获取
-    :return: list<Station>站点列表
+
+    Returns:
+        :return: list<Station> 站点列表
     """
     station_list = []
-    if path is not None:
-        with open(path, 'r') as f:
-            req = f.read()
-    else:
-        req = requests.get("https://kyfw.12306.cn/otn/resources/js/framework/station_name.js").text
+    req = requests.get("https://kyfw.12306.cn/otn/resources/js/framework/station_name.js").text
 
     index = req.index("'")
     namelist = req[index:-1].split("|")
+    # 转换为 StationInfo 对象
     for i in range(0, len(namelist) - 5, 5):
         s = StationInfo(namelist[i + 1], namelist[i + 3], namelist[i + 2], namelist[i + 4])
         station_list.append(s)
     return station_list
 
 
-def get_train_dict(path=None) -> dict:
-    """
-    从本地文件或者网络获取车次信息
+def get_train_dict() -> dict:
+    """获取车次信息
+
     URL: https://kyfw.12306.cn/otn/resources/js/query/train_list.js
-    :param path: 本地文件地址。默认为None表示从网络获取
-    :return: dict{code: TrainInfo} 键-车次 值-TrainInfo对象
+
+    Returns:
+        :return: dict{code: TrainInfo} { 车次: TrainInfo对象 }
     """
     train_dict = {}
-    if path is not None:
-        with open(path, 'r') as f:
-            req = f.read()
-    else:
-        req = requests.get("https://kyfw.12306.cn/otn/resources/js/query/train_list.js").content
+    req = requests.get("https://kyfw.12306.cn/otn/resources/js/query/train_list.js").text
 
     for m in re.finditer('"station_train_code":"(\w+)\((.+?)-(.+?)\)","train_no":"(.+?)"', req):
         t = TrainInfo(m.group(1), m.group(2), m.group(3), m.group(4))
@@ -55,15 +50,19 @@ def get_train_dict(path=None) -> dict:
     return train_dict
 
 
-def get_train_details(train_no: str, start_code: str, end_code: str, date: str) -> list:
-    """
-    从网络查询车次信息
+def query_train(train_no: str, start_code: str, end_code: str, date: str) -> list:
+    """从网络查询车次信息
+
     URL: https://kyfw.12306.cn/otn/czxx/queryByTrainNo
-    :param train_no: 车次
-    :param start_code: 始发站英文缩写
-    :param end_code: 终到站英文缩写
-    :param date: 发车日期
-    :return: list<TrainDetail>
+
+    Args:
+        :param train_no: 车次
+        :param start_code: 始发站电报码
+        :param end_code: 终到站电报码
+        :param date: 发车日期
+
+    Returns:
+        :return: list<TrainDetail>
     """
     r = requests.get("https://kyfw.12306.cn/otn/czxx/queryByTrainNo?train_no=" + train_no
                      + "&from_station_telecode=" + start_code
