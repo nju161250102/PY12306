@@ -5,11 +5,14 @@ train.data
 
 This module can get data from Internet or local file
 """
-from .models import *
-from .utils import get_rs_relation_model, get_rail_model, get_station_model, get_column_value
-import requests
 import re
 import json
+import time
+import requests
+from urllib.parse import quote
+
+from .models import *
+from .utils import get_rs_relation_model, get_rail_model, get_station_model, get_column_value
 
 
 def get_station_list() -> list:
@@ -78,6 +81,34 @@ def query_train(train_no: str, start_code: str, end_code: str, date: str) -> lis
             station_details.append(TrainDetail(item["station_name"], arrive_time, start_time))
 
     return station_details
+
+
+def query_train_by_station(station_name: str, date: str = None) -> list:
+    """按站点查询经停车次信息
+
+    外部网站，数据可能不会及时更新
+    URL: http://www.huochepiao.com/huoche/chezhan_ + XXX
+
+    Args:
+        :param station_name 车站中文名
+        :param date 查询日期
+
+    Returns:
+        :return: 车次列表
+    """
+    train_list = []
+    r = requests.get("http://www.huochepiao.com/huoche/czsearch/?txtChezhan=" + quote(station_name.encode("gbk"))
+                     , allow_redirects=False)
+    pinyin_code = re.match("/huoche/chezhan_([a-z]*)", r.headers["Location"]).group(1)
+    if pinyin_code == "beijing" and station_name != "北京":
+        return train_list
+    if date is None:
+        date = time.strftime("%Y-%m-%d")
+    r = requests.get("http://www.huochepiao.com/huoche/date_%s_%s" % (pinyin_code, date))
+    req = r.content.decode("gbk")
+    for m in re.finditer('<a href="/huoche/checi_(.*?)">', req):
+        train_list.append(m.group(1).split("/")[0])
+    return train_list
 
 
 def get_rails(rail_id: str) -> tuple:
