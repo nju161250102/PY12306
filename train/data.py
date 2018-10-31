@@ -3,7 +3,7 @@
 train.data
 ===========
 
-This module can get data from Internet or local file
+This module can get data from Internet
 """
 import re
 import json
@@ -11,8 +11,8 @@ import time
 import requests
 from urllib.parse import quote
 
-from .models import *
-from .utils import get_rs_relation_model, get_rail_model, get_station_model, get_column_value
+from .utils import get_rs_relation_model, get_rail_model, get_station_model
+from .file import ExcelReader
 
 
 def get_station_list() -> list:
@@ -22,15 +22,22 @@ def get_station_list() -> list:
 
     Returns:
         :return: list<Station> 站点列表
+            Station: dict
+            "name": 中文
+            "pinyin": 拼音
+            "tele_code": 电报码（三位字母）
+            "pinyin_code": 拼音缩写（三位字母）
     """
     station_list = []
     req = requests.get("https://kyfw.12306.cn/otn/resources/js/framework/station_name.js").text
 
     index = req.index("'")
     namelist = req[index:-1].split("|")
-    # 转换为 StationInfo 对象
     for i in range(0, len(namelist) - 5, 5):
-        s = StationInfo(namelist[i + 1], namelist[i + 3], namelist[i + 2], namelist[i + 4])
+        s = {"name": namelist[i + 1],
+             "pinyin": namelist[i + 3],
+             "tele_code": namelist[i + 2],
+             "pinyin_code": namelist[i + 4]}
         station_list.append(s)
     return station_list
 
@@ -41,19 +48,27 @@ def get_train_dict() -> dict:
     URL: https://kyfw.12306.cn/otn/resources/js/query/train_list.js
 
     Returns:
-        :return: dict{code: TrainInfo} { 车次: TrainInfo对象 }
+        :return: dict{code: TrainInfo} { 车次: TrainInfo }
+            TrainInfo: dict
+            "code": 编号
+            "start": 始发站（中文）
+            "end": 终到站（中文）
+            "train_no": 车次
     """
     train_dict = {}
     req = requests.get("https://kyfw.12306.cn/otn/resources/js/query/train_list.js").text
 
     for m in re.finditer('"station_train_code":"(\w+)\((.+?)-(.+?)\)","train_no":"(.+?)"', req):
-        t = TrainInfo(m.group(1), m.group(2), m.group(3), m.group(4))
+        t = {"code": m.group(1),
+             "start": m.group(2),
+             "end": m.group(3),
+             "train_no": m.group(4)}
         if m.group(1) not in train_dict:
-            train_dict[t.code] = t
+            train_dict[t["code"]] = t
     return train_dict
 
 
-def query_train(train_no: str, start_code: str, end_code: str, date: str) -> list:
+def query_train_info(train_no: str, start_code: str, end_code: str, date: str) -> list:
     """从网络查询车次信息
 
     URL: https://kyfw.12306.cn/otn/czxx/queryByTrainNo
@@ -66,6 +81,11 @@ def query_train(train_no: str, start_code: str, end_code: str, date: str) -> lis
 
     Returns:
         :return: list<TrainDetail>
+            TrainDetail: dict
+            "station_name": 停靠站点名
+            "arrive_time": 到达时间[None表示为始发站]
+            "start_time": 开车时间[None表示为终到站]
+            "isEnabled": 是否在查询区间内
     """
     r = requests.get("https://kyfw.12306.cn/otn/czxx/queryByTrainNo?train_no=" + train_no
                      + "&from_station_telecode=" + start_code
@@ -77,8 +97,10 @@ def query_train(train_no: str, start_code: str, end_code: str, date: str) -> lis
     for item in res_data["data"]["data"]:
         arrive_time = None if item["arrive_time"] == "----" else item["arrive_time"]
         start_time = None if item["start_time"] == "----" else item["start_time"]
-        if item["isEnabled"]:
-            station_details.append(TrainDetail(item["station_name"], arrive_time, start_time))
+        station_details.append({"station_name": item["station_name"],
+                                "arrive_time": arrive_time,
+                                "start_time": start_time,
+                                "isEnabled": item["isEnabled"]})
 
     return station_details
 
@@ -112,10 +134,13 @@ def query_train_by_station(station_name: str, date: str = None) -> list:
 
 
 def get_rails(rail_id: str) -> tuple:
-    """
-    从网站获取铁路线路数据
-    :param rail_id: 网站使用的铁路id
-    :return: Rail, list<int> 数据获取失败返回None, None
+    """从网站获取铁路线路数据
+
+    Args:
+        :param rail_id: 网站使用的铁路id
+
+    Returns:
+        :return: Rail, list<int> 数据获取失败返回None, None
     """
     r = requests.get("http://cnrail.geogv.org/api/v1/rail/%s?locale=zhcn" % rail_id)
     result = json.loads(r.text, encoding="utf-8")
@@ -131,20 +156,24 @@ def get_rails(rail_id: str) -> tuple:
     return None, None
 
 
-def get_station(station_id: int, rail_id: int, mileage: int, no: int, station_list, data) -> tuple:
-    """
-    从网站获取站点以及站点-线路关联
-    :param station_id: 站点id
-    :param rail_id: 线路id
-    :param mileage: 线路里程
-    :param no: 站点序号
-    :param station_list: 车站信息列表（来自12306网站）
-    :param data: 车站位置数据（来自xlsx文件）
-    :return: tuple(Station, RailStationRelation)
+def get_station(station_id: int, rail_id: int, mileage: int, no: int, station_list: list) -> tuple:
+    """从网站获取站点以及站点-线路关联
+
+    Args:
+        :param station_id: 站点id
+        :param rail_id: 线路id
+        :param mileage: 线路里程
+        :param no: 站点序号
+        :param station_list: 车站信息列表（来自12306网站）
+
+    Returns:
+        :return: tuple(Station, RailStationRelation)
     """
     r = requests.get(
         "http://cnrail.geogv.org/api/v1/station/%s?locale=zhcn&query-override=&requestGeom=true" % station_id)
     result = json.loads(r.text, encoding="utf-8")
+
+    excel_reader = ExcelReader("station_data.xlsx")
     if result["serviceClass"] != "":
         if result["teleCode"] is None:
             for s in station_list:
@@ -154,8 +183,8 @@ def get_station(station_id: int, rail_id: int, mileage: int, no: int, station_li
             for s in station_list:
                 if s.name == result["localName"]:
                     result["pinyinCode"] = s.pinyin_code.upper()
-        result["x"] = get_column_value(result["localName"], "WGS84_Lng", data)
-        result["y"] = get_column_value(result["localName"], "WGS84_Lat", data)
+        result["x"] = excel_reader.get_column_value(result["localName"], "WGS84_Lng")
+        result["y"] = excel_reader.get_column_value(result["localName"], "WGS84_Lat")
     station = get_station_model(result) if result["serviceClass"] != "" else None
     rs_relation = get_rs_relation_model(rail_id, station_id, mileage, no)
     return station, rs_relation
