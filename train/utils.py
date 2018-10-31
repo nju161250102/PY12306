@@ -92,3 +92,23 @@ def get_station_model(json_dict: dict) -> Station:
                    service=json_dict["serviceClass"],
                    x=json_dict["x"],
                    y=json_dict["y"])
+
+
+def get_ticket_num(value: str):
+    """转换车票数量
+
+    无此席位: None, 有票: -1, 无票: 0
+
+    Args:
+        :param value: 字符串值
+
+    Returns:
+        :return: 结果
+    """
+    if value == "无":
+        return 0
+    elif value == "有":
+        return -1
+    elif value == "":
+        return None
+    return int(value)

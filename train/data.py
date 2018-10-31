@@ -7,11 +7,11 @@ This module can get data from Internet
 """
 import re
 import json
-import time
 import requests
 from urllib.parse import quote
+from bs4 import BeautifulSoup
 
-from .utils import get_rs_relation_model, get_rail_model, get_station_model
+from .utils import get_rs_relation_model, get_rail_model, get_station_model, get_ticket_num
 from .file import ExcelReader
 
 
@@ -105,7 +105,69 @@ def query_train_info(train_no: str, start_code: str, end_code: str, date: str) -
     return station_details
 
 
-def query_train_by_station(station_name: str, date: str = None) -> list:
+def query_left_tickets(start_code: str, end_code: str, date: str) -> dict:
+    """查询余票情况
+
+    URL: https://kyfw.12306.cn/otn/leftTicket/query
+    无此席位: None, 有票: -1, 无票: 0
+
+    Args:
+        :param start_code: 出发站电报码
+        :param end_code: 到达站电报码
+        :param date: 日期
+
+    Returns:
+        :return: dict{train_no: TicketInfo} 车次; 余票信息
+            TicketInfo:
+            "train_code": 编号
+            "train_no": 车次
+            "from_station_code": 始发站电报码
+            "to_station_code": 终到站电报码
+            "start_time": 发车时间
+            "arrive_time": 到达时间
+            "total_time": 用时
+            "business_seat": 商务座
+            "first_class_seat": 一等座
+            "second_class_seat": 二等座
+            "advanced_sleep": 高级软卧
+            "bullet_sleep": 动卧
+            "soft_sleep": 软卧
+            "hard_sleep": 硬卧
+            "soft_seat": 软座
+            "hard_seat": 硬座
+            "no_seat": 无座
+
+    """
+    r = requests.get("https://kyfw.12306.cn/otn/leftTicket/query?leftTicketDTO.train_date=" + date +
+                     "&leftTicketDTO.from_station=" + start_code +
+                     "&leftTicketDTO.to_station=" + end_code +
+                     "&purpose_codes=ADULT")
+    res_data = json.loads(r.text)
+
+    result = {}
+    for s in res_data["data"]["result"]:
+        array = s.split("|")
+        result[array[3]] = {"train_code": array[2],
+                            "train_no": array[3],
+                            "from_station_code": array[4],
+                            "to_station_code": array[5],
+                            "start_time": array[8],
+                            "arrive_time": array[9],
+                            "total_time": array[10],
+                            "business_seat": get_ticket_num(array[32]),
+                            "first_class_seat": get_ticket_num(array[31]),
+                            "second_class_seat": get_ticket_num(array[30]),
+                            "advanced_sleep": get_ticket_num(array[21]),
+                            "bullet_sleep": get_ticket_num(array[33]),
+                            "soft_sleep": get_ticket_num(array[23]),
+                            "hard_sleep": get_ticket_num(array[28]),
+                            "soft_seat": get_ticket_num(array[24]),
+                            "hard_seat": get_ticket_num(array[29]),
+                            "no_seat": get_ticket_num(array[26])}
+    return result
+
+
+def query_train_by_station(station_name: str, date: str) -> list:
     """按站点查询经停车次信息
 
     外部网站，数据可能不会及时更新
@@ -116,20 +178,36 @@ def query_train_by_station(station_name: str, date: str = None) -> list:
         :param date 查询日期
 
     Returns:
-        :return: 车次列表
+        :return: list(TrainInfo) 车次列表
+            TrainInfo
+            "train_no": 车次
+            "type": 类别
+            "start_time": 发车时间
+            "end_time": 到达终点站的时间
+            "time": 总用时
+            "mileage": 里程
     """
     train_list = []
     r = requests.get("http://www.huochepiao.com/huoche/czsearch/?txtChezhan=" + quote(station_name.encode("gbk"))
                      , allow_redirects=False)
     pinyin_code = re.match("/huoche/chezhan_([a-z]*)", r.headers["Location"]).group(1)
+    # 查询车站不存在
     if pinyin_code == "beijing" and station_name != "北京":
         return train_list
-    if date is None:
-        date = time.strftime("%Y-%m-%d")
     r = requests.get("http://www.huochepiao.com/huoche/date_%s_%s" % (pinyin_code, date))
-    req = r.content.decode("gbk")
-    for m in re.finditer('<a href="/huoche/checi_(.*?)">', req):
-        train_list.append(m.group(1).split("/")[0])
+    res = r.content.decode("gbk")
+    soup = BeautifulSoup(res, 'html5lib')
+    for tr in soup.find_all("tr"):
+        if "bgcolor" in tr.attrs.keys():
+            if tr["bgcolor"] == "#ffffff" or tr["bgcolor"] == "#eeeeee":
+                train_no = re.findall('<a href="/huoche/checi_(.*?)">', str(tr))[0].split("/")[0]
+                tds = tr.find_all("td")
+                train_list.append({"train_no": train_no,
+                                   "type": tds[2].string,
+                                   "start_time": tds[3].string,
+                                   "end_time": tds[4].string,
+                                   "time": tds[5].string,
+                                   "mileage": tds[6].string})
     return train_list
 
 
